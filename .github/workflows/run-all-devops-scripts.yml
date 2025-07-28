@@ -1,0 +1,36 @@
+name: Run and Validate Shell Scripts with Output Logs
+
+on:
+  workflow_dispatch:  # manual trigger
+  push:               # auto-trigger on push
+    paths:
+      - '**.sh'       # trigger only if .sh scripts are changed or added
+
+jobs:
+  run-scripts:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout-code
+        uses: actions/checkout@v3
+
+      - name: create-logs-directory
+        run: mkdir -p logs
+
+      - name: find-and-execute-all .sh scripts
+        run: |
+          echo "Scanning and executing scripts..."
+          find . -type f -name "*.sh" | while read script; do
+            script_name=$(basename "$script")
+            log_file="logs/${script_name%.sh}.log"
+
+            echo "Running $script..."
+            chmod +x "$script"
+            bash "$script" > "$log_file" 2>&1 || echo "$script failed" >> "$log_file"
+          done
+
+      - name: upload-log-files-as-artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: all-devops-script-logs
+          path: logs/
